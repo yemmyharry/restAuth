@@ -115,7 +115,7 @@ func User(c *fiber.Ctx) error {
 	})
 	if err != nil {
 		return c.JSON(fiber.Map{
-			"error": err.Error(),
+			"error": "Invalid token. Please login again",
 		})
 	}
 
@@ -126,4 +126,20 @@ func User(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"user": user,
 	})
+}
+
+func Logout(c *fiber.Ctx) error {
+	cookie := &fiber.Cookie{
+		Name:     "jwt-token",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HTTPOnly: true,
+	}
+
+	c.Cookie(cookie)
+
+	return c.JSON(fiber.Map{
+		"status": "logged out",
+	})
+
 }
