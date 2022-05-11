@@ -6,7 +6,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"restAuth/database"
 	"restAuth/models"
+	"strconv"
 	"time"
+)
+
+const (
+	secretKey = "secret"
 )
 
 func Hello(c *fiber.Ctx) error {
@@ -75,10 +80,10 @@ func Login(c *fiber.Ctx) error {
 
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-		Issuer:    string(user.ID),
+		Issuer:    strconv.Itoa(int(user.ID)),
 	})
 
-	token, err := claims.SignedString([]byte("secret"))
+	token, err := claims.SignedString([]byte(secretKey))
 	if err != nil {
 		c.Status(fiber.StatusUnauthorized)
 		return c.JSON(fiber.Map{
@@ -100,4 +105,25 @@ func Login(c *fiber.Ctx) error {
 		"user":   user,
 	})
 
+}
+
+func User(c *fiber.Ctx) error {
+	cookie := c.Cookies("jwt-token", "")
+
+	token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
+	})
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	claims := token.Claims.(*jwt.StandardClaims)
+	var user models.User
+	database.DB.Where("id = ?", claims.Issuer).First(&user)
+
+	return c.JSON(fiber.Map{
+		"user": user,
+	})
 }
